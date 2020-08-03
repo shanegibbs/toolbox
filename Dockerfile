@@ -26,7 +26,7 @@ RUN set -xe && \
 RUN echo "y\ny" | unminimize
 
 RUN apt install -y \
-    build-essential curl ca-certificates unzip sudo man jq \
+    build-essential curl ca-certificates unzip sudo man jq envsubst \
     golang \
     docker.io \
     neovim \
