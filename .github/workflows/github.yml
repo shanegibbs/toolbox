@@ -19,7 +19,7 @@ jobs:
     - name: Build and push to Github
       uses: docker/build-push-action@v1
       with:
-        username: ${{ secrets.GH_USERNAME }}
+        username: ${{ secrets.GH_USER }}
         password: ${{ secrets.GH_TOKEN }}
         repository: docker.pkg.github.com/shanegibbs/toolbox/toolbox
         tags: latest
