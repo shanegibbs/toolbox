@@ -1,5 +1,6 @@
 # toolbox
 
-![Docker](https://github.com/shanegibbs/toolbox/workflows/Docker/badge.svg)
+![Build](https://github.com/shanegibbs/toolbox/workflows/Build/badge.svg)
 
-https://hub.docker.com/r/shanegibbs/toolbox
+* https://github.com/shanegibbs/toolbox/packages
+* https://hub.docker.com/r/shanegibbs/toolbox
