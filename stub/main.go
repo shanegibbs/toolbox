@@ -54,9 +54,11 @@ func setupToolbox(cli *client.Client) *string {
 		fmt.Sprintf("TOOLBOX_INIT_OPTIONS=%s", options.AsString()),
 	}
 	config.Hostname = "toolbox"
+	config.Domainname = "local"
 	config.Tty = true
 
 	hostConfig.NetworkMode = "host"
+	hostConfig.ExtraHosts = []string{"toolbox:127.0.1.1", "toolbox.local:127.0.0.1"}
 	// hostConfig.AutoRemove = true
 	hostConfig.Privileged = true
 

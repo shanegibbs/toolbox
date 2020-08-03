@@ -7,6 +7,7 @@ build:
 	env GOOS=darwin GOARCH=amd64 go build -o ~/.toolbox/bin/toolbox stub/main.go
 	ln -s ../bin/toolbox ~/.toolbox/stubs/toolbox
 	ln -s toolbox ~/.toolbox/stubs/terraform
+	ln -s toolbox ~/.toolbox/stubs/deployer
 
 test: build
 	toolbox terraform version
