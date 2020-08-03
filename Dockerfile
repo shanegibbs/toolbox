@@ -27,6 +27,7 @@ RUN echo "y\ny" | unminimize
 
 RUN apt install -y \
     build-essential curl ca-certificates unzip sudo man jq gettext-base \
+    iputils-ping \
     golang \
     docker.io \
     neovim \
