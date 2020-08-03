@@ -21,7 +21,8 @@ jobs:
       with:
         username: ${{ secrets.GH_USER }}
         password: ${{ secrets.GH_TOKEN }}
-        repository: docker.pkg.github.com/shanegibbs/toolbox/toolbox
+        registry: docker.pkg.github.com
+        repository: shanegibbs/toolbox/toolbox
         tags: latest
         tag_with_ref: true
         tag_with_sha: true
