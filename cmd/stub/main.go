@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/docker/docker/api/types"
@@ -23,8 +25,8 @@ func dockerCli() *client.Client {
 	return cli
 }
 
-func getToolboxID(cli *client.Client) *string {
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+func getToolboxID(ctx context.Context, cli *client.Client) *string {
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
 		panic(err)
 	}
@@ -40,14 +42,16 @@ func getToolboxID(cli *client.Client) *string {
 	return nil
 }
 
-func setupToolbox(cli *client.Client) *string {
+func setupToolbox(ctx context.Context, cli *client.Client) *string {
+	log.Printf("starting new toolbox")
+
 	options := platform.BuildInitOptions()
 
 	var config container.Config
 	var hostConfig container.HostConfig
 	var networkingConfig network.NetworkingConfig
 
-	config.Image = "toolbox"
+	config.Image = "toolboxed"
 	config.Cmd = []string{"tail -f /dev/null"}
 	config.Env = []string{
 		"TOOLBOX_INIT_WAIT=true",
@@ -58,7 +62,10 @@ func setupToolbox(cli *client.Client) *string {
 	config.Tty = true
 
 	hostConfig.NetworkMode = "host"
-	hostConfig.ExtraHosts = []string{"toolbox:127.0.1.1", "toolbox.local:127.0.0.1"}
+	hostConfig.ExtraHosts = []string{
+		"toolbox:127.0.1.1",
+		"toolbox.local:127.0.1.1",
+	}
 	// hostConfig.AutoRemove = true
 	hostConfig.Privileged = true
 
@@ -69,19 +76,34 @@ func setupToolbox(cli *client.Client) *string {
 	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/tmp"))
 	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/Users"))
 
-	create, err := cli.ContainerCreate(context.Background(), &config, &hostConfig, &networkingConfig, "toolbox")
+	create, err := cli.ContainerCreate(ctx, &config, &hostConfig, &networkingConfig, "toolbox")
 	if err != nil {
 		log.Fatalf("Failed to create container: %v", err)
 	}
 
 	// log.Printf("created %v", create.ID)
 
-	err = cli.ContainerStart(context.Background(), create.ID, types.ContainerStartOptions{})
+	err = cli.ContainerStart(ctx, create.ID, types.ContainerStartOptions{})
 	if err != nil {
 		log.Fatalf("Failed to start container: %v", err)
 	}
 
 	// log.Printf("started %v", create.ID)
+
+	var logOptions types.ContainerLogsOptions
+	logOptions.Follow = false
+	logOptions.ShowStdout = true
+	logOptions.ShowStderr = true
+	logOptions.Tail = "100"
+
+	logStream, err := cli.ContainerLogs(ctx, create.ID, logOptions)
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, logStream)
+	if err != nil {
+		log.Fatalf("Failed to read logs: %v", err)
+	}
+
+	log.Printf("Logs: %v", buf.String())
 
 	return &create.ID
 }
@@ -152,12 +174,46 @@ func quickRun() {
 	}
 }
 
+func buildToolboxImage(ctx context.Context, cli *client.Client) {
+	options := platform.BuildInitOptions()
+	setupOptions := options.AsString()
+
+	log.Printf("SHAM_INIT_OPTIONS: %s", setupOptions)
+
+	imageArg := "ubuntu:latest"
+	userID := fmt.Sprintf("%v", options.Uid)
+
+	var buildOptions types.ImageBuildOptions
+	buildOptions.RemoteContext = "http://localhost/Dockerfile"
+	buildOptions.Tags = []string{"toolboxed:latest"}
+	buildOptions.BuildArgs = make(map[string]*string)
+	buildOptions.BuildArgs["IMAGE"] = &imageArg
+	buildOptions.BuildArgs["USER_ID"] = &userID
+	buildOptions.BuildArgs["SHAM_INIT_OPTIONS"] = &setupOptions
+
+	resp, err := cli.ImageBuild(ctx, nil, buildOptions)
+	if err != nil {
+		log.Fatalf("Failed to build toolbox: %v", err)
+	}
+
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Fatalf("Failed to build toolbox: %v", err)
+	}
+
+	log.Println(buf.String())
+}
+
 func main() {
+	ctx := context.Background()
 	cli := dockerCli()
 
-	id := getToolboxID(cli)
+	buildToolboxImage(ctx, cli)
+
+	id := getToolboxID(ctx, cli)
 	if id == nil {
-		id = setupToolbox(cli)
+		id = setupToolbox(ctx, cli)
 	}
 
 	runToolbox()

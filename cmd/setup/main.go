@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 
@@ -43,34 +42,25 @@ func main() {
 		}
 	}
 
-	err := os.Chown("/run/host-services/ssh-auth.sock", options.Uid, options.Gid)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
+	// err := os.Chown("/run/host-services/ssh-auth.sock", options.Uid, options.Gid)
+	// if err != nil {
+	// 	log.Fatalf("%v", err)
+	// }
 
-	sudo := []byte(fmt.Sprintf("%s ALL=(ALL) NOPASSWD:ALL\n", options.Username))
-	err = ioutil.WriteFile("/etc/sudoers.d/user", sudo, 0644)
+	err := os.MkdirAll("/etc/sudoers.d", os.ModeDir)
 	if err != nil {
 		panic(err)
 	}
+
+	// sudo := []byte(fmt.Sprintf("%s ALL=(ALL) NOPASSWD:ALL\n", options.Username))
+	// err = ioutil.WriteFile("/etc/sudoers.d/user", sudo, 0644)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	err = ioutil.WriteFile("/toolbox-options.json", []byte(os.Getenv("PLATFORM_OPTIONS")), 0644)
 	if err != nil {
 		panic(err)
 	}
 
-	if os.Getenv("TOOLBOX_INIT_WAIT") != "" {
-		log.Printf("Sleeping...")
-		select {}
-	}
-}
-
-func runCmd(cmdline string) {
-	log.Printf("# %s", cmdline)
-	cmd := exec.Command("/bin/sh", "-c", cmdline)
-	stdoutStderr, err := cmd.CombinedOutput()
-	fmt.Printf("%s\n", stdoutStderr)
-	if err != nil {
-		panic(err)
-	}
 }

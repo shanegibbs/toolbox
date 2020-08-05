@@ -1,4 +1,8 @@
 build:
+	docker build . -t sham
+	docker rm -f toolbox; go run cmd/stub/main.go || docker logs toolbox
+
+build-old:
 	docker rm -f toolbox || true
 	rm -rf ~/.toolbox
 	mkdir -p ~/.toolbox/{bin,stubs}
@@ -19,3 +23,7 @@ test: build
 install:
 	mkdir -p ~/.toolbox/bin
 	docker run --rm --entrypoint cat toolbox /toolbox-stub > ~/.toolbox/bin/toolbox
+
+nginx:
+	docker rm -f sham-nginx || true
+	docker run --name sham-nginx --net=host -v $(PWD)/build-context:/usr/share/nginx/html:ro nginx
