@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"syscall"
@@ -16,12 +15,13 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	platform "github.com/shanegibbs/toolbox/toolbox"
+	log "github.com/sirupsen/logrus"
 )
 
 func dockerCli() *client.Client {
 	cli, err := client.NewEnvClient()
 	if err != nil {
-		log.Fatalf("Failed to create docker client: %v", err)
+		log.Fatalf("Failed to create docker client: ", err)
 	}
 	return cli
 }
@@ -37,6 +37,7 @@ func getToolboxID(ctx context.Context, cli *client.Client) *string {
 	for _, container := range containers {
 		for _, name := range container.Names {
 			if name == "/toolbox" {
+				log.Debug("Found container ID: ", container.ID)
 				return &container.ID
 			}
 		}
@@ -46,7 +47,7 @@ func getToolboxID(ctx context.Context, cli *client.Client) *string {
 }
 
 func setupToolbox(ctx context.Context, cli *client.Client) *string {
-	log.Printf("starting new toolbox")
+	log.Trace("starting new toolbox")
 
 	options := platform.BuildInitOptions()
 
@@ -81,17 +82,17 @@ func setupToolbox(ctx context.Context, cli *client.Client) *string {
 
 	create, err := cli.ContainerCreate(ctx, &config, &hostConfig, &networkingConfig, "toolbox")
 	if err != nil {
-		log.Fatalf("Failed to create container: %v", err)
+		log.Fatal("Failed to create container: ", err)
 	}
 
-	// log.Printf("created %v", create.ID)
+	log.Debug("created ", create.ID)
 
 	err = cli.ContainerStart(ctx, create.ID, types.ContainerStartOptions{})
 	if err != nil {
-		log.Fatalf("Failed to start container: %v", err)
+		log.Fatal("Failed to start container: ", err)
 	}
 
-	// log.Printf("started %v", create.ID)
+	log.Debug("started ", create.ID)
 
 	var logOptions types.ContainerLogsOptions
 	logOptions.Follow = false
@@ -103,10 +104,10 @@ func setupToolbox(ctx context.Context, cli *client.Client) *string {
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, logStream)
 	if err != nil {
-		log.Fatalf("Failed to read logs: %v", err)
+		log.Fatal("Failed to read logs: ", err)
 	}
 
-	log.Printf("Logs: %v", buf.String())
+	log.Debug("Logs: ", buf.String())
 
 	return &create.ID
 }
@@ -122,10 +123,10 @@ func bindIntoLocal(path string) mount.Mount {
 func inTerminal() bool {
 	fi, _ := os.Stdin.Stat()
 	if (fi.Mode() & os.ModeCharDevice) == 0 {
-		// log.Println("stdin is from pipe")
+		log.Debug("stdin is from pipe")
 		return false
 	} else {
-		// log.Println("stdin is from terminal")
+		log.Debug("stdin is from terminal")
 		return true
 	}
 }
@@ -149,7 +150,7 @@ func runToolbox() {
 	os.Setenv("SHAM_RUN_OPTIONS", runOptions.AsString())
 
 	// hand proc off to docker
-	// log.Print("Handoff to docker")
+	log.Debug("Handing off to docker now")
 	if err := syscall.Exec("/usr/local/bin/docker", args, os.Environ()); err != nil {
 		log.Fatal(err)
 	}
@@ -184,7 +185,7 @@ func buildToolboxImage(ctx context.Context, cli *client.Client) {
 	options := platform.BuildInitOptions()
 	setupOptions := options.AsString()
 
-	log.Printf("SHAM_INIT_OPTIONS: %s", setupOptions)
+	log.Debug("SHAM_INIT_OPTIONS: ", setupOptions)
 
 	imageArg := "ubuntu:latest"
 	userID := fmt.Sprintf("%v", options.Uid)
@@ -200,31 +201,37 @@ func buildToolboxImage(ctx context.Context, cli *client.Client) {
 	buildOptions.BuildArgs["USER_ID"] = &userID
 	buildOptions.BuildArgs["SHAM_INIT_OPTIONS"] = &setupOptions
 
-	log.Println("building image")
+	log.Debug("building image")
 
 	resp, err := cli.ImageBuild(ctx, nil, buildOptions)
 	if err != nil {
-		log.Fatalf("Failed to build toolbox: %v", err)
+		log.Fatal("Failed to build toolbox: ", err)
 	}
 	defer resp.Body.Close()
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		log.Println(line)
+		log.Debug(line)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatalf("reading build output: %v", err)
+		log.Fatal("reading build output: ", err)
 	}
 
-	log.Printf("image build complete")
+	log.Debug("image build complete")
 }
 
 func main() {
+	platform.SetupLogging()
+
+	log.Trace("Start. Args: ", os.Args)
+
 	ctx := context.Background()
+
 	cli := dockerCli()
 
 	id := getToolboxID(ctx, cli)
+
 	if id == nil {
 		buildToolboxImage(ctx, cli)
 		id = setupToolbox(ctx, cli)

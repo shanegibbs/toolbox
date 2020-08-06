@@ -2,12 +2,24 @@ package platform
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
+
+func SetupLogging() {
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: false,
+		ForceColors:   true,
+		FullTimestamp: true,
+		PadLevelText:  true,
+	})
+	// log.SetReportCaller(true)
+}
 
 type InitOptions struct {
 	Username string
@@ -79,12 +91,12 @@ func LoadInitOptionsFromEnv() *InitOptions {
 	var options InitOptions
 	env, exists := os.LookupEnv(initOptionsEnvKey)
 	if !exists {
-		log.Fatalf("%s not found", initOptionsEnvKey)
+		log.Fatal("env not found: ", initOptionsEnvKey)
 	}
-	// log.Printf("%s=%s", initOptionsEnvKey, env)
+	log.Trace(initOptionsEnvKey, "=", env)
 	err := json.Unmarshal([]byte(env), &options)
 	if err != nil {
-		log.Fatalf("Failed to parse init options: %v\n%s", err, env)
+		log.Fatal("Failed to parse init options: ", err, "\n", env)
 	}
 	return &options
 }
@@ -93,12 +105,12 @@ func LoadRunOptionsFromEnv() *RunOptions {
 	var options RunOptions
 	env, exists := os.LookupEnv(runOptionsEnvKey)
 	if !exists {
-		log.Fatalf("%s not found", runOptionsEnvKey)
+		log.Fatal("env not found: ", runOptionsEnvKey)
 	}
-	// log.Printf("%s=%s", initOptionsEnvKey, env)
+	log.Trace(runOptionsEnvKey, "=", env)
 	err := json.Unmarshal([]byte(env), &options)
 	if err != nil {
-		log.Fatalf("Failed to parse init options: %v\n%s", err, env)
+		log.Fatal("Failed to parse run options: ", err, "\n", env)
 	}
 	return &options
 }
