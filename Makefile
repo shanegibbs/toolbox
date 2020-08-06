@@ -28,3 +28,11 @@ test-build-context:
 		--build-arg SHAM_INIT_OPTIONS='{"Username":"shane.gibbs","Home":"/Users/shane.gibbs","Uid":1084496081,"Gid":1538143563}' \
 		--build-arg USER_ID=123 \
 		-f build-context/Dockerfile build-context
+
+.PHONY: toolbox
+toolbox:
+	docker build --pull -t toolbox toolbox
+
+clean:
+	docker rm -f $(shell docker ps -qf label=com.gibbsdevops.sham) || true
+	docker image prune --all --filter label=com.gibbsdevops.sham --force

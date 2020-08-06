@@ -9,7 +9,18 @@ import (
 
 func (sham *Sham) SetupLogging(prefix string) {
 	log := logrus.New()
-	log.SetLevel(logrus.DebugLevel)
+
+	{
+		val, exist := os.LookupEnv("SHAM_LOG")
+		if exist && val == "debug" {
+			log.SetLevel(logrus.DebugLevel)
+		} else if exist && val == "trace" {
+			log.SetLevel(logrus.TraceLevel)
+		} else {
+			log.SetLevel(logrus.WarnLevel)
+		}
+	}
+
 	// logrus.SetFormatter(&logrus.TextFormatter{
 	// 	DisableColors: false,
 	// 	ForceColors:   true,

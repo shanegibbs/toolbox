@@ -14,9 +14,19 @@ func CmdSham() {
 	}
 
 	if sham.shamContainer == nil {
-		sham.FindShamImage()
+		sham.FindShamImage(okIfNotFound())
+
 		if sham.shamImage == nil {
+			sham.FindBaseImage()
+			if sham.baseImage == nil {
+				sham.PullBaseImage()
+				sham.FindBaseImage()
+				if sham.baseImage == nil {
+					sham.l.Fatal("Unable to find image after pulling: ", sham.config.Image)
+				}
+			}
 			sham.BuildImage()
+			sham.FindShamImage(failIfNotFound())
 		}
 		sham.CreateContainer()
 	}

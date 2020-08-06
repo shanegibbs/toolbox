@@ -10,6 +10,14 @@ import (
 	"github.com/docker/docker/api/types/filters"
 )
 
+func failIfNotFound() bool {
+	return true
+}
+
+func okIfNotFound() bool {
+	return false
+}
+
 func (sham *Sham) FindBaseImage() {
 	sham.l.Debug("Finding base image: ", sham.config.Image)
 
@@ -18,7 +26,7 @@ func (sham *Sham) FindBaseImage() {
 	options.Filters.Add("reference", sham.config.Image)
 	images, err := sham.docker.ImageList(sham.ctx, options)
 	if err != nil {
-		sham.l.Fatal("Failed to list images: ", err)
+		sham.l.Fatal("failed to list images: ", err)
 	}
 
 	for i, image := range images {
@@ -33,12 +41,12 @@ func (sham *Sham) FindBaseImage() {
 	sham.l.Info("base image not found")
 }
 
-func (sham *Sham) FindShamImage() {
-	sham.l.Debug("Finding sham image for: ", sham.config.Name, " ", sham.config.Image)
+func (sham *Sham) FindShamImage(mustExist bool) {
+	sham.l.Debug("finding sham image for: ", sham.config.Name, " ", sham.config.Image)
 
 	var options types.ImageListOptions
 	options.Filters = filters.NewArgs()
-	options.Filters.Add("reference", fmt.Sprintf("%s:latest", sham.config.Name))
+	options.Filters.Add("reference", fmt.Sprintf("%s-sham:latest", sham.config.Name))
 	options.Filters.Add("label", fmt.Sprintf("%s=%s", keyShamName, sham.config.Name))
 	options.Filters.Add("label", fmt.Sprintf("%s=%s", keyShamImageRef, sham.config.Image))
 	images, err := sham.docker.ImageList(sham.ctx, options)
@@ -55,7 +63,11 @@ func (sham *Sham) FindShamImage() {
 		return
 	}
 
-	sham.l.Info("sham image not found")
+	if mustExist {
+		sham.l.Fatal("sham image must exist but is not found")
+	} else {
+		sham.l.Info("sham image not found")
+	}
 }
 
 func (sham *Sham) PullBaseImage() {
@@ -64,7 +76,7 @@ func (sham *Sham) PullBaseImage() {
 	var options types.ImagePullOptions
 	resp, err := sham.docker.ImagePull(sham.ctx, sham.config.Image, options)
 	if err != nil {
-		sham.l.Fatal("Failed to pull image: ", err)
+		sham.l.Fatal("failed to pull image: ", err)
 	}
 	defer resp.Close()
 
@@ -81,20 +93,11 @@ func (sham *Sham) PullBaseImage() {
 }
 
 func (sham *Sham) BuildImage() {
-	sham.FindBaseImage()
-	if sham.baseImage == nil {
-		sham.PullBaseImage()
-		sham.FindBaseImage()
-		if sham.baseImage == nil {
-			sham.l.Fatal("Unable to find image after pulling: ", sham.config.Image)
-		}
-	}
-
 	sham.l.Info("building sham image")
 
 	image := sham.baseImage
 
-	sham.l.Debug("Using image id:", image.ID, " labels:", image.Labels)
+	sham.l.Debug("using base image id:", image.ID, " labels:", image.Labels)
 
 	hasher := sha1.New()
 	hasher.Write([]byte(image.ID))
@@ -112,10 +115,11 @@ func (sham *Sham) BuildImage() {
 	// buildOptions.ForceRemove = true
 	// buildOptions.NoCache = true
 	buildOptions.Tags = []string{
-		fmt.Sprintf("%s:%s", sham.config.Name, encodedID),
-		fmt.Sprintf("%s:latest", sham.config.Name),
+		fmt.Sprintf("%s-sham:%s", sham.config.Name, encodedID),
+		fmt.Sprintf("%s-sham:latest", sham.config.Name),
 	}
 	buildOptions.Labels = map[string]string{
+		keySham:         "",
 		keyShamName:     sham.config.Name,
 		keyShamImageID:  image.ID,
 		keyShamImageRef: sham.config.Image,
@@ -125,24 +129,25 @@ func (sham *Sham) BuildImage() {
 	buildOptions.BuildArgs["USER_ID"] = &userID
 	buildOptions.BuildArgs["SHAM_INIT_OPTIONS"] = &initOptions
 
-	sham.l.Debug("building image")
+	sham.l.Debug("running build")
 
 	resp, err := sham.docker.ImageBuild(sham.ctx, nil, buildOptions)
 	if err != nil {
-		sham.l.Fatal("Failed to build toolbox: ", err)
+		sham.l.Fatal("failed to build toolbox: ", err)
 	}
 	defer resp.Body.Close()
+
+	// dec = json.NewDecoder(resp.Body)
+	// var msg jsonmessage.JSONMessage
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		sham.l.Debug(line)
+		sham.l.Trace(line)
 	}
 	if err := scanner.Err(); err != nil {
 		sham.l.Fatal("reading build output: ", err)
 	}
 
 	sham.l.Debug("image build complete")
-
-	sham.FindShamImage()
 }

@@ -13,11 +13,15 @@ import (
 )
 
 func (sham *Sham) CreateContainer() {
-	sham.l.Trace("starting new container")
+	sham.l.Debug("starting new container")
 
 	var config container.Config
 	var hostConfig container.HostConfig
 	var networkingConfig network.NetworkingConfig
+
+	if sham.shamImage == nil {
+		sham.l.Fatal("sham image not found")
+	}
 
 	config.Image = sham.shamImage.ID
 	// config.Cmd = []string{"tail -f /dev/null"}

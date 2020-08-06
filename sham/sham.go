@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const keySham = "com.gibbsdevops.sham"
 const keyShamName = "com.gibbsdevops.sham.name"
 const keyShamImageID = "com.gibbsdevops.sham.image.id"
 const keyShamImageRef = "com.gibbsdevops.sham.image.ref"
@@ -73,9 +74,9 @@ func (sham *Sham) BuildRunOptions() {
 func (sham *Sham) CreateDockerClient() {
 	docker, err := client.NewEnvClient()
 	if err != nil {
-		sham.l.Fatalf("Failed to create docker client: ", err)
+		sham.l.Fatalf("failed to create docker client: ", err)
 	}
-	sham.l.Debug("Created docker client")
+	sham.l.Debug("created docker client")
 	sham.docker = docker
 }
 
@@ -131,7 +132,7 @@ func (sham *Sham) SendCommandToContainer() {
 	os.Setenv("SHAM_RUN_OPTIONS", sham.runOptions.AsString())
 
 	// hand proc off to docker
-	sham.l.Debug("Handing off to docker now")
+	sham.l.Debug("handing off to docker")
 	if err := syscall.Exec("/usr/local/bin/docker", args, os.Environ()); err != nil {
 		sham.l.Fatal(err)
 	}
