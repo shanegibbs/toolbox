@@ -38,7 +38,7 @@ func CmdRun() {
 		log.Fatal("unable to find ", arg0)
 	}
 
-	sham.l.Info("Running in toolbox: ", runOptions.Args)
+	sham.l.Info("executing: ", runOptions.Args)
 
 	if err := syscall.Exec(binary, runOptions.Args, runOptions.Env); err != nil {
 		log.Fatal(err)

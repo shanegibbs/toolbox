@@ -3,15 +3,22 @@ package sham
 func CmdSham() {
 	sham := New()
 	sham.SetupLogging("sham")
+	sham.LoadConfig()
 	sham.CreateDockerClient()
 	sham.BuildInitOptions()
 	sham.BuildRunOptions()
 
-	id := sham.FindExistingContainerID()
+	sham.FindShamContainer()
+	if sham.shamContainer != nil {
+		sham.SendCommandToContainer()
+	}
 
-	if id == nil {
-		sham.BuildImage()
-		id = sham.CreateContainer()
+	if sham.shamContainer == nil {
+		sham.FindShamImage()
+		if sham.shamImage == nil {
+			sham.BuildImage()
+		}
+		sham.CreateContainer()
 	}
 
 	sham.SendCommandToContainer()

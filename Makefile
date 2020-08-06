@@ -1,11 +1,7 @@
 build:
 	go build ./...
 	docker build . -t sham
-	docker rm -f toolbox; go run cmd/sham/main.go || docker logs toolbox
-
-	# ln -s ../bin/toolbox ~/.toolbox/stubs/toolbox
-	# ln -s toolbox ~/.toolbox/stubs/terraform
-	# ln -s toolbox ~/.toolbox/stubs/deployer
+	docker rm -f toolbox; go run cmd/sham/main.go cat /etc/lsb-release || docker logs toolbox
 
 test: build
 	toolbox terraform version
@@ -19,6 +15,9 @@ install:
 	# go build -o ~/.sham/bin/sham cmd/stub/main.go
 	go build -o ~/bin/sham cmd/stub/main.go
 	# docker run --rm --entrypoint cat toolbox /toolbox-stub > ~/.toolbox/bin/toolbox
+	# ln -s ../bin/toolbox ~/.toolbox/stubs/toolbox
+	# ln -s toolbox ~/.toolbox/stubs/terraform
+	# ln -s toolbox ~/.toolbox/stubs/deployer
 
 nginx:
 	docker run --name sham-nginx --rm --net=host -v $(PWD)/build-context:/usr/share/nginx/html:ro nginx

@@ -17,4 +17,5 @@ require (
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	gopkg.in/hlandau/service.v1 v1.0.7
+	gopkg.in/yaml.v2 v2.3.0
 )

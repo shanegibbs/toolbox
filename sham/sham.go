@@ -3,25 +3,36 @@ package sham
 import (
 	"context"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
-	"strings"
 	"syscall"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
+const keyShamName = "com.gibbsdevops.sham.name"
+const keyShamImageID = "com.gibbsdevops.sham.image.id"
+const keyShamImageRef = "com.gibbsdevops.sham.image.ref"
+
 type Sham struct {
-	ctx         context.Context
-	l           *logrus.Entry
-	initOptions *InitOptions
-	runOptions  *RunOptions
-	docker      *client.Client
+	ctx           context.Context
+	l             *logrus.Entry
+	initOptions   *InitOptions
+	runOptions    *RunOptions
+	docker        *client.Client
+	config        *Config
+	baseImage     *types.ImageSummary
+	shamImage     *types.ImageSummary
+	shamContainer *types.Container
+}
+
+type Config struct {
+	Name  string
+	Image string
 }
 
 func New() *Sham {
@@ -31,6 +42,24 @@ func New() *Sham {
 		ctx: context.Background(),
 		l:   l,
 	}
+}
+
+func (sham *Sham) LoadConfig() {
+	bodyBytes, err := ioutil.ReadFile("sham.yaml")
+	if err != nil {
+		sham.l.Fatal("Failed to read sham.yaml", err)
+	}
+	body := string(bodyBytes)
+
+	sham.l.Debug("config:\n", body)
+
+	var config Config
+	err = yaml.Unmarshal(bodyBytes, &config)
+	if err != nil {
+		sham.l.Fatal("failed to parse config: ", err)
+	}
+
+	sham.config = &config
 }
 
 func (sham *Sham) BuildInitOptions() {
@@ -50,96 +79,29 @@ func (sham *Sham) CreateDockerClient() {
 	sham.docker = docker
 }
 
-func (sham *Sham) FindExistingContainerID() *string {
+func (sham *Sham) FindShamContainer() {
 	listOptions := types.ContainerListOptions{}
 	listOptions.All = true
+	listOptions.Filters = filters.NewArgs()
+	listOptions.Filters.Add("label", fmt.Sprintf("%s=%s", keyShamName, sham.config.Name))
+	listOptions.Filters.Add("label", fmt.Sprintf("%s=%s", keyShamImageRef, sham.config.Image))
 	containers, err := sham.docker.ContainerList(sham.ctx, listOptions)
 	if err != nil {
 		panic(err)
 	}
 
 	for _, container := range containers {
-		for _, name := range container.Names {
-			if name == "/toolbox" {
-				sham.l.Debug("Found container ID: ", container.ID)
-				return &container.ID
-			}
+		if container.State != "running" {
+			continue
 		}
+		for _, name := range container.Names {
+			sham.l.Debug("Found sham container ID: ", container.ID, " with name: ", name, " ", container.State, "/", container.Status)
+		}
+		sham.shamContainer = &container
+		return
 	}
 
-	return nil
-}
-
-func (sham *Sham) CreateContainer() *string {
-	sham.l.Trace("starting new container")
-
-	var config container.Config
-	var hostConfig container.HostConfig
-	var networkingConfig network.NetworkingConfig
-
-	config.Image = "toolboxed"
-	// config.Cmd = []string{"tail -f /dev/null"}
-	// config.Env = []string{
-	// 	"TOOLBOX_INIT_WAIT=true",
-	// 	fmt.Sprintf("TOOLBOX_INIT_OPTIONS=%s", sham.initOptions.AsString()),
-	// }
-	config.Hostname = "toolbox"
-	config.Domainname = "local"
-	config.Tty = true
-
-	hostConfig.NetworkMode = "host"
-	hostConfig.ExtraHosts = []string{
-		"toolbox:127.0.1.1",
-		"toolbox.local:127.0.1.1",
-	}
-	// hostConfig.AutoRemove = true
-	hostConfig.Privileged = true
-
-	hostConfig.Mounts = []mount.Mount{}
-	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost(sham.initOptions.Home))
-	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/var/run/docker.sock"))
-	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/run/host-services/ssh-auth.sock"))
-	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/tmp"))
-	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/Users"))
-
-	create, err := sham.docker.ContainerCreate(sham.ctx, &config, &hostConfig, &networkingConfig, "toolbox")
-	if err != nil {
-		sham.l.Fatal("Failed to create container: ", err)
-	}
-
-	sham.l.Debug("created ", create.ID)
-
-	err = sham.docker.ContainerStart(sham.ctx, create.ID, types.ContainerStartOptions{})
-	if err != nil {
-		sham.l.Fatal("Failed to start container: ", err)
-	}
-
-	sham.l.Debug("started ", create.ID)
-
-	var logOptions types.ContainerLogsOptions
-	logOptions.Follow = false
-	logOptions.ShowStdout = true
-	logOptions.ShowStderr = true
-	logOptions.Tail = "100"
-
-	logStream, err := sham.docker.ContainerLogs(sham.ctx, create.ID, logOptions)
-	buf := new(strings.Builder)
-	_, err = io.Copy(buf, logStream)
-	if err != nil {
-		sham.l.Fatal("Failed to read logs: ", err)
-	}
-
-	sham.l.Debug("Logs: ", buf.String())
-
-	return &create.ID
-}
-
-func cloneFromHost(path string) mount.Mount {
-	return mount.Mount{Type: mount.TypeBind, Source: path, Target: path}
-}
-
-func bindIntoLocal(path string) mount.Mount {
-	return mount.Mount{Type: mount.TypeBind, Source: path, Target: fmt.Sprintf("/host", path)}
+	sham.l.Info("sham container not found")
 }
 
 func (sham *Sham) inTerminal() bool {
@@ -162,7 +124,7 @@ func (sham *Sham) SendCommandToContainer() {
 	}
 	args = append(args, "--env", "SHAM_INIT_OPTIONS")
 	args = append(args, "--env", "SHAM_RUN_OPTIONS")
-	args = append(args, "toolbox")
+	args = append(args, sham.shamContainer.ID)
 	args = append(args, "/sham-run")
 
 	os.Setenv("SHAM_INIT_OPTIONS", sham.initOptions.AsString())
