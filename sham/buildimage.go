@@ -22,7 +22,7 @@ func okIfNotFound() bool {
 	return false
 }
 
-func (sham *Sham) FindBaseImage() {
+func (sham *Sham) FindBaseImage(mustExist bool) {
 	sham.l.Debug("Finding base image: ", sham.config.Image)
 
 	var options types.ImageListOptions
@@ -42,7 +42,11 @@ func (sham *Sham) FindBaseImage() {
 		return
 	}
 
-	sham.l.Info("base image not found")
+	if mustExist {
+		sham.l.Fatal("base image must exist but is not found")
+	} else {
+		sham.l.Info("base image not found")
+	}
 }
 
 func (sham *Sham) FindShamImage(mustExist bool) {
