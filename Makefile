@@ -13,7 +13,7 @@ test: build
 install:
 	# mkdir -p ~/.sham/bin
 	# go build -o ~/.sham/bin/sham cmd/stub/main.go
-	go build -o ~/bin/sham cmd/stub/main.go
+	go build -o ~/bin/sham cmd/sham/main.go
 	# docker run --rm --entrypoint cat toolbox /toolbox-stub > ~/.toolbox/bin/toolbox
 	# ln -s ../bin/toolbox ~/.toolbox/stubs/toolbox
 	# ln -s toolbox ~/.toolbox/stubs/terraform

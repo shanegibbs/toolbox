@@ -40,13 +40,6 @@ RUN mkdir -p /tmp/terraform && cd /tmp/terraform \
     && mv /tmp/terraform/terraform /usr/local/bin/terraform \
     && rm -rf /tmp/terraform
 
-COPY . /bla
-RUN cd /bla && go build -o /toolbox-init init/main.go
-RUN cd /bla && go build -o /toolbox-run run/main.go
-RUN cd /bla && env GOOS=darwin GOARCH=amd64 go build -o /toolbox-stub stub/main.go
-
 COPY root /
 
 ENV DEBIAN_FRONTEND=
-ENTRYPOINT ["/toolbox-init"]
-CMD ["/bin/bash"]

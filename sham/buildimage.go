@@ -90,6 +90,8 @@ func (sham *Sham) BuildImage() {
 		}
 	}
 
+	sham.l.Info("building sham image")
+
 	image := sham.baseImage
 
 	sham.l.Debug("Using image id:", image.ID, " labels:", image.Labels)
