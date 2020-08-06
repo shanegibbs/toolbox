@@ -9,17 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SetupLogging() {
-	log.SetLevel(log.DebugLevel)
-	log.SetFormatter(&log.TextFormatter{
-		DisableColors: false,
-		ForceColors:   true,
-		FullTimestamp: true,
-		PadLevelText:  true,
-	})
-	// log.SetReportCaller(true)
-}
-
 type InitOptions struct {
 	Username string
 	Home     string

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/api/types"
-	log "github.com/sirupsen/logrus"
 )
 
 func (sham *Sham) BuildImage() {
@@ -27,21 +26,21 @@ func (sham *Sham) BuildImage() {
 	buildOptions.BuildArgs["USER_ID"] = &userID
 	buildOptions.BuildArgs["SHAM_INIT_OPTIONS"] = &setupOptions
 
-	log.Debug("building image")
+	sham.l.Debug("building image")
 
 	resp, err := sham.docker.ImageBuild(sham.ctx, nil, buildOptions)
 	if err != nil {
-		log.Fatal("Failed to build toolbox: ", err)
+		sham.l.Fatal("Failed to build toolbox: ", err)
 	}
 	defer resp.Body.Close()
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		log.Debug(line)
+		sham.l.Debug(line)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatal("reading build output: ", err)
+		sham.l.Fatal("reading build output: ", err)
 	}
 
 	sham.l.Debug("image build complete")

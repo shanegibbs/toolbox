@@ -10,6 +10,9 @@ import (
 )
 
 func CmdRun() {
+	sham := New()
+	sham.SetupLogging("run")
+
 	initOptions := LoadInitOptionsFromEnv()
 	runOptions := LoadRunOptionsFromEnv()
 
@@ -35,7 +38,7 @@ func CmdRun() {
 		log.Fatal("unable to find ", arg0)
 	}
 
-	log.Info("Running in toolbox: ", runOptions.Args)
+	sham.l.Info("Running in toolbox: ", runOptions.Args)
 
 	if err := syscall.Exec(binary, runOptions.Args, runOptions.Env); err != nil {
 		log.Fatal(err)

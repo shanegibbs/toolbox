@@ -20,4 +20,4 @@ LABEL com.gibbsdevops.sham.image="${IMAGE}"
 
 USER ${USER_ID}
 ENTRYPOINT ["/sham-init"]
-CMD ["/bin/bash"]
+CMD []

@@ -8,6 +8,9 @@ import (
 )
 
 func CmdSetup() {
+	sham := New()
+	sham.SetupLogging("setup")
+
 	options := LoadInitOptionsFromEnv()
 
 	{
