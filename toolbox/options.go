@@ -73,6 +73,7 @@ func BuildRunOptions() *RunOptions {
 }
 
 const initOptionsEnvKey = "SHAM_INIT_OPTIONS"
+const runOptionsEnvKey = "SHAM_RUN_OPTIONS"
 
 func LoadInitOptionsFromEnv() *InitOptions {
 	var options InitOptions
@@ -90,14 +91,14 @@ func LoadInitOptionsFromEnv() *InitOptions {
 
 func LoadRunOptionsFromEnv() *RunOptions {
 	var options RunOptions
-	env, exists := os.LookupEnv("TOOLBOX_RUN_OPTIONS")
+	env, exists := os.LookupEnv(runOptionsEnvKey)
 	if !exists {
-		log.Fatalf("TOOLBOX_RUN_OPTIONS not found")
+		log.Fatalf("%s not found", runOptionsEnvKey)
 	}
-	// log.Printf("TOOLBOX_RUN_OPTIONS=%s", env)
+	// log.Printf("%s=%s", initOptionsEnvKey, env)
 	err := json.Unmarshal([]byte(env), &options)
 	if err != nil {
-		log.Fatalf("Failed to parse run options: %v\n%s", err, env)
+		log.Fatalf("Failed to parse init options: %v\n%s", err, env)
 	}
 	return &options
 }

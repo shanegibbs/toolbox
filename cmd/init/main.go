@@ -3,10 +3,24 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		fmt.Println()
+		fmt.Println(sig)
+		done <- true
+	}()
+
 	// options := platform.LoadInitOptionsFromEnv()
 
 	/*
@@ -58,9 +72,13 @@ func main() {
 	*/
 
 	// if os.Getenv("TOOLBOX_INIT_WAIT") != "" {
-	log.Printf("Sleeping...")
-	select {}
+	// log.Printf("Sleeping...")
+	// select {}
 	// }
+
+	fmt.Println("awaiting TERM signal")
+	<-done
+	fmt.Println("exiting")
 }
 
 func runCmd(cmdline string) {

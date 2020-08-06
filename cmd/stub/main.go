@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -26,7 +27,9 @@ func dockerCli() *client.Client {
 }
 
 func getToolboxID(ctx context.Context, cli *client.Client) *string {
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
+	listOptions := types.ContainerListOptions{}
+	listOptions.All = true
+	containers, err := cli.ContainerList(ctx, listOptions)
 	if err != nil {
 		panic(err)
 	}
@@ -128,7 +131,8 @@ func inTerminal() bool {
 }
 
 func runToolbox() {
-	options := platform.BuildRunOptions()
+	initOptions := platform.BuildInitOptions()
+	runOptions := platform.BuildRunOptions()
 
 	var args []string
 	args = append(args, "docker", "exec")
@@ -136,11 +140,13 @@ func runToolbox() {
 	if inTerminal() {
 		args = append(args, "-t")
 	}
-	args = append(args, "--env", "TOOLBOX_RUN_OPTIONS")
+	args = append(args, "--env", "SHAM_INIT_OPTIONS")
+	args = append(args, "--env", "SHAM_RUN_OPTIONS")
 	args = append(args, "toolbox")
-	args = append(args, "/toolbox-run")
+	args = append(args, "/sham-run")
 
-	os.Setenv("TOOLBOX_RUN_OPTIONS", options.AsString())
+	os.Setenv("SHAM_INIT_OPTIONS", initOptions.AsString())
+	os.Setenv("SHAM_RUN_OPTIONS", runOptions.AsString())
 
 	// hand proc off to docker
 	// log.Print("Handoff to docker")
@@ -185,34 +191,42 @@ func buildToolboxImage(ctx context.Context, cli *client.Client) {
 
 	var buildOptions types.ImageBuildOptions
 	buildOptions.RemoteContext = "http://localhost/Dockerfile"
+	buildOptions.Remove = true
+	buildOptions.ForceRemove = true
+	buildOptions.NoCache = true
 	buildOptions.Tags = []string{"toolboxed:latest"}
 	buildOptions.BuildArgs = make(map[string]*string)
 	buildOptions.BuildArgs["IMAGE"] = &imageArg
 	buildOptions.BuildArgs["USER_ID"] = &userID
 	buildOptions.BuildArgs["SHAM_INIT_OPTIONS"] = &setupOptions
 
+	log.Println("building image")
+
 	resp, err := cli.ImageBuild(ctx, nil, buildOptions)
 	if err != nil {
 		log.Fatalf("Failed to build toolbox: %v", err)
 	}
+	defer resp.Body.Close()
 
-	buf := new(strings.Builder)
-	_, err = io.Copy(buf, resp.Body)
-	if err != nil {
-		log.Fatalf("Failed to build toolbox: %v", err)
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Println(line)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("reading build output: %v", err)
 	}
 
-	log.Println(buf.String())
+	log.Printf("image build complete")
 }
 
 func main() {
 	ctx := context.Background()
 	cli := dockerCli()
 
-	buildToolboxImage(ctx, cli)
-
 	id := getToolboxID(ctx, cli)
 	if id == nil {
+		buildToolboxImage(ctx, cli)
 		id = setupToolbox(ctx, cli)
 	}
 

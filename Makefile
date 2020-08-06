@@ -25,5 +25,11 @@ install:
 	docker run --rm --entrypoint cat toolbox /toolbox-stub > ~/.toolbox/bin/toolbox
 
 nginx:
-	docker rm -f sham-nginx || true
-	docker run --name sham-nginx --net=host -v $(PWD)/build-context:/usr/share/nginx/html:ro nginx
+	docker run --name sham-nginx --rm --net=host -v $(PWD)/build-context:/usr/share/nginx/html:ro nginx
+
+test-build-context:
+	docker build --no-cache \
+		--build-arg IMAGE='ubuntu' \
+		--build-arg SHAM_INIT_OPTIONS='{"Username":"shane.gibbs","Home":"/Users/shane.gibbs","Uid":1084496081,"Gid":1538143563}' \
+		--build-arg USER_ID=123 \
+		-f build-context/Dockerfile build-context

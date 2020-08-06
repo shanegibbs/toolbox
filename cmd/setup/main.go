@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 
@@ -13,6 +13,8 @@ func main() {
 	options := platform.LoadInitOptionsFromEnv()
 
 	{
+		log.Printf("Creating group")
+
 		var cmdargs []string
 		cmdargs = append(cmdargs, "--gid", fmt.Sprint(options.Gid))
 		cmdargs = append(cmdargs, options.Username)
@@ -26,12 +28,15 @@ func main() {
 	}
 
 	{
+		log.Printf("Creating user")
+
 		var cmdargs []string
 		cmdargs = append(cmdargs, "--home-dir", options.Home)
 		cmdargs = append(cmdargs, "--gid", fmt.Sprint(options.Gid))
 		cmdargs = append(cmdargs, "--no-create-home")
 		cmdargs = append(cmdargs, "--shell", "/bin/bash")
 		cmdargs = append(cmdargs, "--uid", fmt.Sprint(options.Uid))
+		cmdargs = append(cmdargs, "--no-log-init")
 		cmdargs = append(cmdargs, options.Username)
 
 		cmd := exec.Command("useradd", cmdargs...)
@@ -47,6 +52,7 @@ func main() {
 	// 	log.Fatalf("%v", err)
 	// }
 
+	log.Printf("Creating sudoers.d")
 	err := os.MkdirAll("/etc/sudoers.d", os.ModeDir)
 	if err != nil {
 		panic(err)
@@ -58,9 +64,10 @@ func main() {
 	// 	panic(err)
 	// }
 
-	err = ioutil.WriteFile("/toolbox-options.json", []byte(os.Getenv("PLATFORM_OPTIONS")), 0644)
-	if err != nil {
-		panic(err)
-	}
+	// err = ioutil.WriteFile("/toolbox-options.json", []byte(os.Getenv("PLATFORM_OPTIONS")), 0644)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
+	log.Printf("--sham-setup-complete--")
 }
