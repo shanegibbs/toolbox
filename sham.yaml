@@ -1,3 +1,6 @@
 name: toolbox
-image: registry.hub.docker.com/library/ubuntu:latest
-# image: toolbox:latest
+# image: registry.hub.docker.com/library/ubuntu:latest
+image: toolbox:latest
+shams:
+- terraform
+- deployer

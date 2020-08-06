@@ -4,10 +4,14 @@ import (
 	"bufio"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/sirupsen/logrus"
 )
 
 func failIfNotFound() bool {
@@ -124,10 +128,12 @@ func (sham *Sham) BuildImage() {
 		keyShamImageID:  image.ID,
 		keyShamImageRef: sham.config.Image,
 	}
+
 	buildOptions.BuildArgs = make(map[string]*string)
 	buildOptions.BuildArgs["IMAGE"] = &sham.config.Image
 	buildOptions.BuildArgs["USER_ID"] = &userID
 	buildOptions.BuildArgs["SHAM_INIT_OPTIONS"] = &initOptions
+	buildOptions.BuildArgs["SHAM_BINARY_IMAGE"] = &sham.binaryImageRef
 
 	sham.l.Debug("running build")
 
@@ -137,16 +143,31 @@ func (sham *Sham) BuildImage() {
 	}
 	defer resp.Body.Close()
 
-	// dec = json.NewDecoder(resp.Body)
-	// var msg jsonmessage.JSONMessage
+	dec := json.NewDecoder(resp.Body)
 
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Text()
-		sham.l.Trace(line)
-	}
-	if err := scanner.Err(); err != nil {
-		sham.l.Fatal("reading build output: ", err)
+	for {
+		var jm jsonmessage.JSONMessage
+		if err := dec.Decode(&jm); err != nil {
+			if err == io.EOF {
+				break
+			}
+			sham.l.Fatal("failed to decode build messages: ", err)
+		}
+
+		// output json at trace levels
+		if sham.l.Logger.IsLevelEnabled(logrus.TraceLevel) {
+			j, err := json.Marshal(jm)
+			if err != nil {
+				sham.l.Warn("failed to marshal jsonmessage from build: ", err)
+			}
+			sham.l.Trace("build: ", string(j))
+		}
+
+		if jm.Error != nil {
+			sham.l.Fatal("sham image build failed: ", jm.Error.Message)
+		} else if jm.Stream != "\n" && len(jm.Stream) > 0 {
+			sham.l.Info("build stream: ", jm.Stream)
+		}
 	}
 
 	sham.l.Debug("image build complete")

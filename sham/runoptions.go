@@ -2,6 +2,7 @@ package sham
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -24,19 +25,28 @@ func (o *RunOptions) AsString() string {
 	return string(buf)
 }
 
-func BuildRunOptions() *RunOptions {
+func (sham *Sham) BuildRunOptions() {
 	workdir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	args := os.Args
+
+	path := fmt.Sprintf("/Users/shane.gibbs/.sham/shams/%s/", sham.config.Name)
+	if strings.HasPrefix(args[0], path) {
+		sham.l.Info("detected sham ", path)
+		args[0] = args[0][len(path):]
+		sham.l.Info("set arg0 ", args[0])
+	}
+
 	options := &RunOptions{
 		Workdir: workdir,
-		Args:    os.Args,
+		Args:    args,
 		Env:     os.Environ(),
 	}
 
-	return options
+	sham.runOptions = options
 }
 
 func LoadRunOptionsFromEnv() *RunOptions {

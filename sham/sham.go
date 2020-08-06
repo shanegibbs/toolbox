@@ -20,28 +20,31 @@ const keyShamImageID = "com.gibbsdevops.sham.image.id"
 const keyShamImageRef = "com.gibbsdevops.sham.image.ref"
 
 type Sham struct {
-	ctx           context.Context
-	l             *logrus.Entry
-	initOptions   *InitOptions
-	runOptions    *RunOptions
-	docker        *client.Client
-	config        *Config
-	baseImage     *types.ImageSummary
-	shamImage     *types.ImageSummary
-	shamContainer *types.Container
+	ctx            context.Context
+	l              *logrus.Entry
+	initOptions    *InitOptions
+	runOptions     *RunOptions
+	docker         *client.Client
+	config         *Config
+	binaryImageRef string
+	baseImage      *types.ImageSummary
+	shamImage      *types.ImageSummary
+	shamContainer  *types.Container
 }
 
 type Config struct {
 	Name  string
 	Image string
+	Shams []string
 }
 
 func New() *Sham {
 	l := logrus.WithField("prefix", "foo")
 	l.Trace("Start. Args: ", os.Args)
 	return &Sham{
-		ctx: context.Background(),
-		l:   l,
+		ctx:            context.Background(),
+		l:              l,
+		binaryImageRef: "sham",
 	}
 }
 
@@ -63,12 +66,26 @@ func (sham *Sham) LoadConfig() {
 	sham.config = &config
 }
 
-func (sham *Sham) BuildInitOptions() {
-	sham.initOptions = BuildInitOptions()
+func (sham *Sham) InstallShams() {
+	sham.l.Trace("installing shams ", sham.config.Shams)
+
+	path := fmt.Sprintf("/Users/shane.gibbs/.sham/shams/%s", sham.config.Name)
+
+	// TODO check if exists first, error if can't delte
+	os.RemoveAll(path)
+
+	os.MkdirAll(path, 0755)
+
+	for _, s := range sham.config.Shams {
+		shamPath := fmt.Sprintf("%s/%s", path, s)
+
+		sham.l.Info("installing sham ", shamPath)
+		os.Symlink("/Users/shane.gibbs/bin/sham", shamPath)
+	}
 }
 
-func (sham *Sham) BuildRunOptions() {
-	sham.runOptions = BuildRunOptions()
+func (sham *Sham) BuildInitOptions() {
+	sham.initOptions = BuildInitOptions()
 }
 
 func (sham *Sham) CreateDockerClient() {

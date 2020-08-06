@@ -29,6 +29,7 @@ func CmdSham() {
 			sham.FindShamImage(failIfNotFound())
 		}
 		sham.CreateContainer()
+		sham.InstallShams()
 	}
 
 	sham.SendCommandToContainer()

@@ -12,6 +12,7 @@
 1. Different HOME from host?
 1. should we build new image from base? or add into existing at runtime?
 1. `sham run ubuntu` to run with defaults and no config
+1. replicate log level to in-container
 
 ## stand-alone tool
 
@@ -25,10 +26,12 @@ Search order:
 1. in image
 
 ```yaml
-- name: toolbox
-  image: toolbox
-  keep: true
-  stubs:
-  - terraform
-  - deployer
+name: toolbox
+image: toolbox
+keep: true
+shams:
+- terraform
+- deployer
 ```
+
+* <https://superuser.com/questions/521657/zsh-automatically-set-environment-variables-for-a-directory>
