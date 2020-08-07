@@ -3,7 +3,7 @@ SHAM_LOG=trace
 build:
 	go build ./...
 	docker build . -t sham
-	docker rm -f toolbox; go run cmd/sham/main.go cat /etc/lsb-release || docker logs toolbox
+	docker rm -f toolbox 2>/dev/null; go run cmd/sham/main.go cat /etc/lsb-release || docker logs toolbox
 
 run-sham:
 	env SHAM_LOG=$(SHAM_LOG) go run cmd/sham/main.go cat /etc/lsb-release

@@ -12,12 +12,18 @@ func (sham *Sham) SetupLogging(prefix string) {
 
 	{
 		val, exist := os.LookupEnv("SHAM_LOG")
-		if exist && val == "debug" {
+		if exist && val == "fatal" {
+			log.SetLevel(logrus.FatalLevel)
+		} else if exist && val == "error" {
+			log.SetLevel(logrus.ErrorLevel)
+		} else if exist && val == "info" {
+			log.SetLevel(logrus.InfoLevel)
+		} else if exist && val == "debug" {
 			log.SetLevel(logrus.DebugLevel)
 		} else if exist && val == "trace" {
 			log.SetLevel(logrus.TraceLevel)
 		} else {
-			log.SetLevel(logrus.WarnLevel)
+			log.SetLevel(logrus.InfoLevel)
 		}
 	}
 

@@ -4,9 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
-
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/hlandau/service.v1/daemon/setuid"
 )
 
 func CmdRun() {
@@ -20,27 +17,33 @@ func CmdRun() {
 
 	err := os.Chdir(runOptions.Workdir)
 	if err != nil {
-		log.Fatal("Unable to chdir to ", runOptions.Workdir, ": ", err)
+		sham.l.Fatal("Unable to chdir to ", runOptions.Workdir, ": ", err)
 	}
 
+	sham.l.Debug("before uid=", os.Getuid(), "/", os.Geteuid(), " gid=", os.Getgid(), "/", os.Getegid())
+
+	sham.l.Debug("setting uid=", initOptions.Uid, " gui=", initOptions.Gid)
+
 	// drop perms
-	setuid.Setuid(initOptions.Uid)
-	setuid.Setgid(initOptions.Gid)
+	// setuid.Setuid(initOptions.Uid)
+	// setuid.Setgid(initOptions.Gid)
+
+	sham.l.Debug("after  uid=", os.Getuid(), "/", os.Geteuid(), " gid=", os.Getgid(), "/", os.Getegid())
 
 	if len(runOptions.Args) < 1 {
-		log.Fatal("received no args")
+		sham.l.Fatal("received no args")
 	}
 
 	arg0 := runOptions.Args[0]
 
 	binary, err := exec.LookPath(arg0)
 	if err != nil {
-		log.Fatal("unable to find ", arg0)
+		sham.l.Fatal("unable to find ", arg0)
 	}
 
 	sham.l.Info("executing: ", runOptions.Args)
 
 	if err := syscall.Exec(binary, runOptions.Args, runOptions.Env); err != nil {
-		log.Fatal(err)
+		sham.l.Fatal(err)
 	}
 }

@@ -10,10 +10,16 @@
 1. Run adhoc container, or single run
 1. Bind options. What directories to bind? Add more?
 1. Different HOME from host?
-1. should we build new image from base? or add into existing at runtime?
+1. ~~should we build new image from base? or add into existing at runtime?~~
 1. `sham run ubuntu` to run with defaults and no config
 1. replicate log level to in-container
 1. save state of running containers so we can cleanup shams
+1. bin is 8MB. rust? docker client is golang though
+1. add all groups the user belongs to?
+1. log not loading correctly in container
+1. pass go deps into build container, remove local go build
+1. add app version info
+1. pull sham image from github, optional locally for dev
 
 ## stand-alone tool
 
@@ -46,3 +52,11 @@ shams:
 1. `sham start ubuntu`
 1. `sham stop ubuntu`
 1. `sham update ubuntu`
+1. `sham clean` - remove sham containers and images
+
+## issues
+
+```shell
+bash-5.0$ ls -al |grep host
+drwxr-xr-x   4 root root    4096 Aug  7 09:09 host%!(EXTRA string=
+```

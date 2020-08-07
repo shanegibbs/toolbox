@@ -51,7 +51,7 @@ func New() *Sham {
 func (sham *Sham) LoadConfig() {
 	bodyBytes, err := ioutil.ReadFile("sham.yaml")
 	if err != nil {
-		sham.l.Fatal("Failed to read sham.yaml", err)
+		sham.l.Fatal("Failed to read sham.yaml: ", err)
 	}
 	body := string(bodyBytes)
 
@@ -142,6 +142,7 @@ func (sham *Sham) SendCommandToContainer() {
 	}
 	args = append(args, "--env", "SHAM_INIT_OPTIONS")
 	args = append(args, "--env", "SHAM_RUN_OPTIONS")
+	args = append(args, "--env", "SHAM_LOG")
 	args = append(args, sham.shamContainer.ID)
 	args = append(args, "/sham-run")
 
@@ -149,7 +150,7 @@ func (sham *Sham) SendCommandToContainer() {
 	os.Setenv("SHAM_RUN_OPTIONS", sham.runOptions.AsString())
 
 	// hand proc off to docker
-	sham.l.Debug("handing off to docker")
+	sham.l.Info("handing off to container ", sham.shamContainer.Names[0])
 	if err := syscall.Exec("/usr/local/bin/docker", args, os.Environ()); err != nil {
 		sham.l.Fatal(err)
 	}
