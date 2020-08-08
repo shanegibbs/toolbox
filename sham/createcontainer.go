@@ -12,6 +12,14 @@ import (
 	"github.com/docker/docker/api/types/network"
 )
 
+func fileExists(filename string) bool {
+    info, err := os.Stat(filename)
+    if os.IsNotExist(err) {
+        return false
+    }
+    return !info.IsDir()
+}
+
 func (sham *Sham) CreateContainer() {
 	sham.l.Debug("starting new container")
 
@@ -43,8 +51,12 @@ func (sham *Sham) CreateContainer() {
 
 	hostConfig.Mounts = []mount.Mount{}
 	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost(sham.initOptions.Home))
-	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/var/run/docker.sock"))
-	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/run/host-services/ssh-auth.sock"))
+	if fileExists("/var/run/docker.sock") {
+		hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/var/run/docker.sock"))
+	}
+	if fileExists("/run/host-services/ssh-auth.sock") {
+		hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/run/host-services/ssh-auth.sock"))
+	}
 	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/tmp"))
 	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/Users"))
 
