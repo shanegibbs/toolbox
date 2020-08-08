@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
