@@ -38,8 +38,8 @@ func (sham *Sham) CreateContainer() {
 		fmt.Sprintf("%s:127.0.1.1", sham.config.Name),
 		fmt.Sprintf("%s.local:127.0.1.1", sham.config.Name),
 	}
-	// hostConfig.AutoRemove = true
-	hostConfig.Privileged = true
+	hostConfig.AutoRemove = true
+	// hostConfig.Privileged = true
 
 	hostConfig.Mounts = []mount.Mount{}
 	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost(sham.initOptions.Home))

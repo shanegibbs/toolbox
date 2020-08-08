@@ -3,16 +3,15 @@ FROM golang:1.14 as builder
 WORKDIR /go/src/app
 COPY go.mod go.sum ./
 RUN find .
-RUN go get -d -v ./...
+RUN go mod download
 
 COPY . .
 
 ENV GOBIN /output
-RUN go install -v ./...
-# RUN env GOOS=darwin GOARCH=amd64 go build -o $GOBIN/stub-mac cmd/stub/main.go
-
-RUN ls -al /output/
+RUN mkdir /output
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /output ./...
+RUN mv /output/sham /output/sham.linux
+# RUN GOOS=darwin GOARCH=amd64 go build -o /output/sham.darwin cmd/sham/main.go
 
 FROM busybox
 COPY --from=builder /output /sham/
-RUN ls -al /sham

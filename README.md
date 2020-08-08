@@ -45,6 +45,7 @@ shams:
 
 ## caller use cases
 
+1. `sham run ubuntu` - single use by default?
 1. `sham run ubuntu ls` - single use by default?
 1. `sham` - maybe? tricky with multiple sham containers
 1. `ubuntu`

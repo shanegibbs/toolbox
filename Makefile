@@ -1,12 +1,31 @@
-SHAM_LOG=trace
+export SHAM_LOG=trace
 
-build:
-	go build ./...
+UNAME_S:=$(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	OS = linux
+endif
+ifeq ($(UNAME_S),Darwin)
+	OS = darwin
+endif
+
+build: clean-containers clean-images
+	printenv |grep SHAM
+
 	docker build . -t sham
-	docker rm -f toolbox 2>/dev/null; go run cmd/sham/main.go cat /etc/lsb-release || docker logs toolbox
+	# docker run --rm sham ls -al /sham
+	docker rm -f toolbox 2>/dev/null || true
+	
+	rm -rf output && mkdir output
+	docker run --rm sham sh -c "cd /sham && tar -cf- sham.$(OS)" |tar -xvf- -C output
+	mv output/sham.$(OS) output/sham
+	
+	env PATH="$(PWD)/output:$(PATH)" sham bash -c "cat /etc/lsb-release; id"
 
 run-sham:
-	env SHAM_LOG=$(SHAM_LOG) go run cmd/sham/main.go cat /etc/lsb-release
+	go run cmd/sham/main.go bash -c "cat /etc/lsb-release; id"
+
+docker-build:
+	docker run --rm -v $(PWD):/work --workdir /work  -v $(PWD)/.cache:/root/.cache golang:1.14 go build ./...
 
 test: build
 	toolbox terraform version
@@ -25,7 +44,7 @@ install:
 	# ln -s toolbox ~/.toolbox/stubs/deployer
 
 nginx:
-	docker run --name sham-nginx --rm --net=host -v $(PWD)/build-context:/usr/share/nginx/html:ro nginx
+	docker run --name sham-nginx --rm --net=host -v $(PWD)/build-context:/usr/share/nginx/html nginx
 
 test-build-context:
 	docker build --no-cache \
@@ -45,3 +64,4 @@ clean-images:
 	docker image prune --all --filter label=com.gibbsdevops.sham --force
 
 clean: clean-containers clean-images
+	rm -rf output

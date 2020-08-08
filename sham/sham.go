@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"syscall"
 
 	"github.com/docker/docker/api/types"
@@ -149,9 +150,14 @@ func (sham *Sham) SendCommandToContainer() {
 	os.Setenv("SHAM_INIT_OPTIONS", sham.initOptions.AsString())
 	os.Setenv("SHAM_RUN_OPTIONS", sham.runOptions.AsString())
 
+	docker, err := exec.LookPath("docker")
+    if err != nil {
+        sham.l.Fatal("docker not found: ", err)
+	}
+
 	// hand proc off to docker
 	sham.l.Info("handing off to container ", sham.shamContainer.Names[0])
-	if err := syscall.Exec("/usr/local/bin/docker", args, os.Environ()); err != nil {
-		sham.l.Fatal(err)
+	if err := syscall.Exec(docker, args, os.Environ()); err != nil {
+		sham.l.Fatal("hand off failed: ", err)
 	}
 }

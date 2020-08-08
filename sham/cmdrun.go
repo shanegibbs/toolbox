@@ -25,8 +25,8 @@ func CmdRun() {
 	sham.l.Debug("setting uid=", initOptions.Uid, " gui=", initOptions.Gid)
 
 	// drop perms
-	// setuid.Setuid(initOptions.Uid)
-	// setuid.Setgid(initOptions.Gid)
+	syscall.Setuid(initOptions.Uid)
+	syscall.Setgid(initOptions.Gid)
 
 	sham.l.Debug("after  uid=", os.Getuid(), "/", os.Geteuid(), " gid=", os.Getgid(), "/", os.Getegid())
 
