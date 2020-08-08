@@ -13,12 +13,12 @@ import (
 	"github.com/docker/docker/api/types/network"
 )
 
-func fileExists(filename string) bool {
-    info, err := os.Stat(filename)
+func pathExists(path string) bool {
+    info, err := os.Stat(path)
     if os.IsNotExist(err) {
         return false
     }
-    return !info.IsDir()
+    return true
 }
 
 func (sham *Sham) CreateContainer() {
@@ -52,14 +52,18 @@ func (sham *Sham) CreateContainer() {
 
 	hostConfig.Mounts = []mount.Mount{}
 	hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost(sham.initOptions.Home))
-	if fileExists("/var/run/docker.sock") {
+	if pathExists("/var/run/docker.sock") {
 		hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/var/run/docker.sock"))
 	}
-	if fileExists("/run/host-services/ssh-auth.sock") {
+	if pathExists("/run/host-services/ssh-auth.sock") {
 		hostConfig.Mounts = append(hostConfig.Mounts, cloneFromHost("/run/host-services/ssh-auth.sock"))
 	}
-	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/tmp"))
-	hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/Users"))
+	if pathExists("/tmp") {
+		hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/tmp"))
+	}
+	if pathExists("/Users") {
+		hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/Users"))
+	}
 
 	create, err := sham.docker.ContainerCreate(sham.ctx, &config, &hostConfig, &networkingConfig, "")
 	if err != nil {
