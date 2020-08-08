@@ -10,7 +10,7 @@ endif
 
 build: clean-containers clean-images
 	printenv |grep SHAM
-
+	
 	docker build . -t sham
 	# docker run --rm sham ls -al /sham
 	docker rm -f toolbox 2>/dev/null || true
@@ -46,12 +46,17 @@ install:
 nginx:
 	docker run --name sham-nginx --rm --net=host -v $(PWD)/build-context:/usr/share/nginx/html nginx
 
+n:
+	echo $(USER)
+	echo $(HOME)
+
 test-build-context:
 	docker build --no-cache \
-		--build-arg IMAGE='ubuntu' \
-		--build-arg SHAM_INIT_OPTIONS='{"Username":"shane.gibbs","Home":"/Users/shane.gibbs","Uid":1084496081,"Gid":1538143563}' \
-		--build-arg USER_ID=123 \
-		-f build-context/Dockerfile build-context
+		--build-arg IMAGE=toolbox \
+		--build-arg SHAM_BINARY_IMAGE=sham \
+		--build-arg SHAM_INIT_OPTIONS='{"Username":"$(USER)","Home":"$(HOME)","Uid":$(shell id -u),"Gid":$(shell id -g)}' \
+		--build-arg USER_ID=$(shell id -u) \
+		-f build-context/Dockerfile build-context -t test-build-context
 
 .PHONY: toolbox
 toolbox:
