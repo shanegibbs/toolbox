@@ -14,7 +14,7 @@ import (
 )
 
 func pathExists(path string) bool {
-    info, err := os.Stat(path)
+    _, err := os.Stat(path)
     if os.IsNotExist(err) {
         return false
     }
