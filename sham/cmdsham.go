@@ -1,11 +1,8 @@
 package sham
 
 func CmdSham() {
-	// if os.Args {
-	// }
-	sham := New()
-	sham.SetupLogging("sham")
-	sham.LoadConfig()
+	sham := New("sham")
+	sham.config.Load()
 	sham.CreateDockerClient()
 	sham.BuildInitOptions()
 	sham.BuildRunOptions()

@@ -3,8 +3,8 @@ package sham
 import (
 	"fmt"
 	"io"
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -14,11 +14,8 @@ import (
 )
 
 func pathExists(path string) bool {
-    _, err := os.Stat(path)
-    if os.IsNotExist(err) {
-        return false
-    }
-    return true
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
 
 func (sham *Sham) CreateContainer() {
@@ -120,5 +117,5 @@ func cloneFromHost(path string) mount.Mount {
 }
 
 func bindIntoLocal(path string) mount.Mount {
-	return mount.Mount{Type: mount.TypeBind, Source: path, Target: fmt.Sprintf("/host", path)}
+	return mount.Mount{Type: mount.TypeBind, Source: path, Target: fmt.Sprintf("/host%s", path)}
 }

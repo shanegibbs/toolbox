@@ -13,6 +13,8 @@ COPY --from=sham /sham/run /sham-run
 
 RUN /sham-setup
 
-USER ${USER_ID}
+# TODO save user ID
+# USER ${USER_ID}
+USER 0
 ENTRYPOINT ["/sham-init"]
 CMD []

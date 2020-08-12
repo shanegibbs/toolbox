@@ -19,7 +19,7 @@ build: clean-containers clean-images
 	docker run --rm sham sh -c "cd /sham && tar -cf- sham.$(OS)" |tar -xvf- -C output
 	mv output/sham.$(OS) output/sham
 	
-	env PATH="$(PWD)/output:$(PATH)" sham bash -c "cat /etc/lsb-release; id"
+	env PATH="$(PWD)/output:$(PATH)" sham run ubuntu bash -c "cat /etc/lsb-release; id"
 
 run-sham:
 	go run cmd/sham/main.go bash -c "cat /etc/lsb-release; id"

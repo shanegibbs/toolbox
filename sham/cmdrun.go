@@ -4,11 +4,12 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
 )
 
-func CmdRun() {
-	sham := New()
-	sham.SetupLogging("run")
+func CmdRun(dropPerms func(l *logrus.Entry, initOptions *InitOptions)) {
+	sham := New("run")
 
 	initOptions := LoadInitOptionsFromEnv()
 	runOptions := LoadRunOptionsFromEnv()
@@ -22,11 +23,7 @@ func CmdRun() {
 
 	sham.l.Debug("before uid=", os.Getuid(), "/", os.Geteuid(), " gid=", os.Getgid(), "/", os.Getegid())
 
-	sham.l.Debug("setting uid=", initOptions.Uid, " gui=", initOptions.Gid)
-
-	// drop perms
-	syscall.Setuid(initOptions.Uid)
-	syscall.Setgid(initOptions.Gid)
+	dropPerms(sham.l, initOptions)
 
 	sham.l.Debug("after  uid=", os.Getuid(), "/", os.Geteuid(), " gid=", os.Getgid(), "/", os.Getegid())
 

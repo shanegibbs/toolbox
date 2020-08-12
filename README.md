@@ -20,6 +20,8 @@
 1. pass go deps into build container, remove local go build
 1. add app version info
 1. pull sham image from github, optional locally for dev
+1. replace docker exec
+1. only pass in workdir by default. add to labels, check when running sham
 
 ## stand-alone tool
 
@@ -61,3 +63,17 @@ shams:
 bash-5.0$ ls -al |grep host
 drwxr-xr-x   4 root root    4096 Aug  7 09:09 host%!(EXTRA string=
 ```
+
+## problem statement
+
+Example:
+
+* <https://golangci-lint.run/usage/install/#local-installation>
+
+```shell
+docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.30.0 golangci-lint run -v
+```
+
+Could be:
+* `sham run golangci/golangci-lint run -v`
+* `golangci-lint run -v` with `sham install golangci/golangci-lint`

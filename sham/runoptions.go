@@ -31,8 +31,9 @@ func (sham *Sham) BuildRunOptions() {
 		log.Fatal(err)
 	}
 
-	args := os.Args
+	args := sham.config.Args
 
+	// TODO look into this
 	path := fmt.Sprintf("/Users/shane.gibbs/.sham/shams/%s/", sham.config.Name)
 	if strings.HasPrefix(args[0], path) {
 		sham.l.Info("detected sham ", path)

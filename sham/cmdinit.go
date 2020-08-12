@@ -10,8 +10,7 @@ import (
 )
 
 func CmdInit() {
-	sham := New()
-	sham.SetupLogging("init")
+	// sham := New("init")
 
 	sigs := make(chan os.Signal, 1)
 	done := make(chan bool, 1)

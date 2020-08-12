@@ -3,7 +3,6 @@ package sham
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"syscall"
@@ -12,7 +11,6 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 const keySham = "com.gibbsdevops.sham"
@@ -33,38 +31,20 @@ type Sham struct {
 	shamContainer  *types.Container
 }
 
-type Config struct {
-	Name  string
-	Image string
-	Shams []string
-}
-
-func New() *Sham {
-	l := logrus.WithField("prefix", "foo")
-	l.Trace("Start. Args: ", os.Args)
-	return &Sham{
+func New(name string) *Sham {
+	sham := &Sham{
 		ctx:            context.Background(),
-		l:              l,
 		binaryImageRef: "sham",
 	}
-}
 
-func (sham *Sham) LoadConfig() {
-	bodyBytes, err := ioutil.ReadFile("sham.yaml")
-	if err != nil {
-		sham.l.Fatal("Failed to read sham.yaml: ", err)
-	}
-	body := string(bodyBytes)
-
-	sham.l.Debug("config:\n", body)
+	sham.SetupLogging(name)
+	sham.l.Trace("Start. Args: ", os.Args)
 
 	var config Config
-	err = yaml.Unmarshal(bodyBytes, &config)
-	if err != nil {
-		sham.l.Fatal("failed to parse config: ", err)
-	}
-
+	config.l = sham.l
 	sham.config = &config
+
+	return sham
 }
 
 func (sham *Sham) InstallShams() {
@@ -151,8 +131,8 @@ func (sham *Sham) SendCommandToContainer() {
 	os.Setenv("SHAM_RUN_OPTIONS", sham.runOptions.AsString())
 
 	docker, err := exec.LookPath("docker")
-    if err != nil {
-        sham.l.Fatal("docker not found: ", err)
+	if err != nil {
+		sham.l.Fatal("docker not found: ", err)
 	}
 
 	// hand proc off to docker

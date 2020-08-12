@@ -108,7 +108,10 @@ func (sham *Sham) BuildImage() {
 	sham.l.Debug("using base image id:", image.ID, " labels:", image.Labels)
 
 	hasher := sha1.New()
-	hasher.Write([]byte(image.ID))
+	_, err := hasher.Write([]byte(image.ID))
+	if err != nil {
+		sham.l.Fatal("failed to hash image ID", err)
+	}
 	encodedID := base64.URLEncoding.EncodeToString(hasher.Sum(nil))[:12]
 
 	initOptions := sham.initOptions.AsString()
