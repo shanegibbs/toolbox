@@ -1,9 +1,11 @@
 package sham
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -11,6 +13,8 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/moby/term"
+	"github.com/shanegibbs/toolbox/sham/ext/streams"
 )
 
 func pathExists(path string) bool {
@@ -18,9 +22,7 @@ func pathExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func (sham *Sham) CreateContainer() {
-	sham.l.Debug("starting new container")
-
+func (sham *Sham) BuildContainerConfig() (*container.Config, *container.HostConfig, *network.NetworkingConfig) {
 	var config container.Config
 	var hostConfig container.HostConfig
 	var networkingConfig network.NetworkingConfig
@@ -62,7 +64,146 @@ func (sham *Sham) CreateContainer() {
 		hostConfig.Mounts = append(hostConfig.Mounts, bindIntoLocal("/Users"))
 	}
 
-	create, err := sham.docker.ContainerCreate(sham.ctx, &config, &hostConfig, &networkingConfig, "")
+	return &config, &hostConfig, &networkingConfig
+}
+
+func (sham *Sham) RunContainer() {
+	sham.l.Debug("starting new container")
+
+	config, hostConfig, networkingConfig := sham.BuildContainerConfig()
+
+	stdin, stdout, stderr := term.StdStreams()
+	inStream := streams.NewIn(stdin)
+	outStream := streams.NewOut(stdout)
+	errStream := stderr
+
+	// Telling the Windows daemon the initial size of the tty during start makes
+	// a far better user experience rather than relying on subsequent resizes
+	// to cause things to catch up.
+	if runtime.GOOS == "windows" {
+		hostConfig.ConsoleSize[0], hostConfig.ConsoleSize[1] = outStream.GetTtySize()
+	}
+
+	ctx, cancelFun := context.WithCancel(sham.ctx)
+	defer cancelFun()
+
+	create, err := sham.docker.ContainerCreate(sham.ctx, config, hostConfig, networkingConfig, "")
+	if err != nil {
+		sham.l.Fatal("Failed to create container: ", err)
+	}
+
+	sham.l.Debug("created ", create.ID)
+
+	// sigc := ForwardAllSignals(ctx, dockerCli, createResponse.ID)
+	// defer signal.StopCatch(sigc)
+
+	attachOptions := types.ContainerAttachOptions{
+		Stream: true,
+		Stdin:  true,
+		Stdout: true,
+		Stderr: true,
+	}
+
+	attach, errAttach := sham.docker.ContainerAttach(ctx, create.ID, attachOptions)
+	if err != nil {
+		sham.l.Fatal("Failed to attach container: ", err)
+	}
+	defer attach.Close()
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- func() error {
+			streamer := hijackedIOStreamer{
+				streams:      dockerCli,
+				inputStream:  in,
+				outputStream: out,
+				errorStream:  cerr,
+				resp:         resp,
+				tty:          config.Tty,
+				detachKeys:   options.DetachKeys,
+			}
+
+			if errHijack := streamer.stream(ctx); errHijack != nil {
+				return errHijack
+			}
+			return errAttach
+		}()
+	}()
+
+	cancelFun()
+	<-errCh
+}
+
+/*
+func attachContainer(
+	ctx context.Context,
+	errCh *chan error,
+	config *container.Config,
+	containerID string,
+) (func(), error) {
+	stdout, stderr := dockerCli.Out(), dockerCli.Err()
+	var (
+		out, cerr io.Writer
+		in        io.ReadCloser
+	)
+	if config.AttachStdin {
+		in = dockerCli.In()
+	}
+	if config.AttachStdout {
+		out = stdout
+	}
+	if config.AttachStderr {
+		if config.Tty {
+			cerr = stdout
+		} else {
+			cerr = stderr
+		}
+	}
+
+	options := types.ContainerAttachOptions{
+		Stream:     true,
+		Stdin:      config.AttachStdin,
+		Stdout:     config.AttachStdout,
+		Stderr:     config.AttachStderr,
+		DetachKeys: dockerCli.ConfigFile().DetachKeys,
+	}
+
+	resp, errAttach := dockerCli.Client().ContainerAttach(ctx, containerID, options)
+	if errAttach != nil {
+		return nil, errAttach
+	}
+
+	ch := make(chan error, 1)
+	*errCh = ch
+
+	go func() {
+		ch <- func() error {
+			streamer := hijackedIOStreamer{
+				streams:      dockerCli,
+				inputStream:  in,
+				outputStream: out,
+				errorStream:  cerr,
+				resp:         resp,
+				tty:          config.Tty,
+				detachKeys:   options.DetachKeys,
+			}
+
+			if errHijack := streamer.stream(ctx); errHijack != nil {
+				return errHijack
+			}
+			return errAttach
+		}()
+	}()
+	return resp.Close, nil
+}
+*/
+
+func (sham *Sham) StartContainer() {
+	sham.l.Debug("starting new container")
+
+	config, hostConfig, networkingConfig := sham.BuildContainerConfig()
+	create, err := sham.docker.ContainerCreate(sham.ctx, config, hostConfig, networkingConfig, "")
 	if err != nil {
 		sham.l.Fatal("Failed to create container: ", err)
 	}

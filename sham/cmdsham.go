@@ -14,7 +14,7 @@ func CmdSham() {
 
 	sham.FindShamImage(okIfNotFound())
 	if sham.shamImage != nil {
-		sham.CreateContainer()
+		sham.StartContainer()
 		sham.InstallShams()
 		sham.SendCommandToContainer()
 	}
@@ -23,7 +23,7 @@ func CmdSham() {
 	if sham.baseImage != nil {
 		sham.BuildImage()
 		sham.FindShamImage(failIfNotFound())
-		sham.CreateContainer()
+		sham.StartContainer()
 		sham.InstallShams()
 		sham.SendCommandToContainer()
 	}
@@ -32,7 +32,7 @@ func CmdSham() {
 	sham.FindBaseImage(failIfNotFound())
 	sham.BuildImage()
 	sham.FindShamImage(failIfNotFound())
-	sham.CreateContainer()
+	sham.StartContainer()
 	sham.InstallShams()
 	sham.SendCommandToContainer()
 }

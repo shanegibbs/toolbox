@@ -22,6 +22,8 @@
 1. pull sham image from github, optional locally for dev
 1. replace docker exec
 1. only pass in workdir by default. add to labels, check when running sham
+1. remove "this"
+1. docker client version https://github.com/moby/moby/issues/39302 maybe update to github.com/docker/engine
 
 ## stand-alone tool
 
@@ -77,3 +79,8 @@ docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.30.0 golangci-l
 Could be:
 * `sham run golangci/golangci-lint run -v`
 * `golangci-lint run -v` with `sham install golangci/golangci-lint`
+
+```shell
+go get -d github.com/docker/docker@19.03
+go get -d github.com/docker/cli/cli@19.03
+```
